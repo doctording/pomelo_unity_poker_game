@@ -1,0 +1,6 @@
+Library/
+
+!.gitignore
+
+*.userprefs
+*.meta
