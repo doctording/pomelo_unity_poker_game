@@ -54,7 +54,7 @@ public class puke : MonoBehaviour
     public GameObject tipPrefab; // 弹框的prefab
     public GameObject msgPrefab; // 牌的信息prefab
 
-    public int GameState; // 0 未结束，1 结束
+    public int GameState; // -1 游戏未开始， 0 游戏开始了， 1 游戏已经结束（也可以说游戏未开始）
     bool isFapai; // 是否需要发牌的flag标志
     public int whosTurn; // 这一轮轮到谁出牌
 
@@ -72,7 +72,7 @@ public class puke : MonoBehaviour
         //////////////////////////////////////////////////////
         index_CardsCnt = new Dictionary<int, int>();
         btnStart_Flag = false;
-        GameState = 0;
+        GameState = -1;
         deleteCards = new ArrayList();
         lastIndexTextContent = "还未开始";
         isFapai = false;
@@ -124,6 +124,24 @@ public class puke : MonoBehaviour
             // 游戏结束
             pclient.on("onOver", gameOverUI);
         }
+
+        btnStart_Flag = true;
+
+        if(index == 3) // 如果自己是最后一个进入的，那么准备按钮初始 就是可点击的
+        {
+            btnStart_Flag = false;
+        }
+
+        // 玩家中途退出了,情况有多种情况 ???
+        //pclient.on("onDelCommonUserInRoom", (data) =>
+        //{
+        //    string tmp = data.ToString();
+        //    JsonData jdtmp = JsonMapper.ToObject(tmp);
+
+        //    string newRid = jdtmp["rid"].ToString();
+        //    string uid = jdtmp["uid"].ToString();
+
+        //});
     }
 
     void userAdd(JsonObject data)
@@ -134,6 +152,11 @@ public class puke : MonoBehaviour
         string newRid = jdtmp["rid"].ToString();
         string uid = jdtmp["uid"].ToString();
         string strIndex = jdtmp["index"].ToString();
+
+        if(int.Parse(strIndex) == 3)
+        {
+            btnStart_Flag = false;
+        }
 
         if (!userList.Contains(uid))
             userList.Add(uid);
@@ -196,6 +219,7 @@ public class puke : MonoBehaviour
         userCardNumberGO = new ArrayList();
         GameState = 0;
 
+        // 每个玩家对应的剩余扑克牌数
         index_CardsCnt.Add(1, 17);
         index_CardsCnt.Add(2, 17);
         index_CardsCnt.Add(3, 17);
@@ -288,7 +312,7 @@ public class puke : MonoBehaviour
     // 准备按钮的点击事件处理
     void Btn_StartGame()
     {
-        if (btnStart_Flag) // 已经点过了
+        if (btnStart_Flag) // 已经点过了,或者人还没有凑成3个人
         {
             return;
         }
@@ -344,6 +368,9 @@ public class puke : MonoBehaviour
     // 不出牌按钮的点击事件
     void Btn_BuChuPai()
     {
+        if (!isGameStart())
+            return;
+
         if (whosTurn != index)
         {
             //Debug.Log("还未轮到自己出牌");
@@ -372,6 +399,9 @@ public class puke : MonoBehaviour
     // 出牌按钮的点击事件
     void Btn_OutCards()
     {
+        if (!isGameStart())
+            return;
+
         if (whosTurn != index)
         {
             //Debug.Log("还未轮到自己出牌");
@@ -506,6 +536,9 @@ public class puke : MonoBehaviour
     // 重置按钮的点击事件
     void Btn_ResetCards()
     {
+        if (!isGameStart())
+            return;
+
         foreach (GameObject obj in userCardNumberGO)
         {
             string strVal = obj.transform.FindChild("Text").gameObject.GetComponent<Text>().text;
@@ -547,6 +580,22 @@ public class puke : MonoBehaviour
         hashMap[val] = !flag;
     }
 
+    // 判断游戏是否开始，并给出弹框提示
+    bool isGameStart()
+    {
+        if(GameState != 0) // 未开始， 弹出提示框
+        {
+            GameObject newTip = Instantiate(tipPrefab);
+            newTip.transform.FindChild("Text").GetComponent<Text>().text = "游戏还未开始";
+            newTip.transform.parent = mycanvas.transform;
+            newTip.GetComponent<RectTransform>().localPosition = new Vector3(0, 0, 0);
+            Destroy(newTip, 2.0f);
+
+            return false;
+        }
+        return true;
+    }
+
     void Update()
     {
         // 开始按钮的图片显示
@@ -584,8 +633,7 @@ public class puke : MonoBehaviour
             newTip.GetComponent<RectTransform>().localPosition = new Vector3(0, 0, 0);
             Destroy(newTip, 2.0f);
 
-
-            GameState = 0;
+            GameState = -1;
             //return;
         }
 
